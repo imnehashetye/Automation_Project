@@ -39,3 +39,35 @@ echo "Archiving complete"
 echo "Storing archiving log files to S3"
 aws s3 cp /tmp/$ARCHIVED_FILE_NAME s3://$s3_bucket/$ARCHIVED_FILE_NAME
 echo "Uploaded files to S3"
+
+size=$(aws s3 ls s3://$s3_bucket/$ARCHIVED_FILE_NAME|awk '{print $3}')
+echo "size $size"
+
+file_path="/var/www/html"
+inventory_file="inventory.html"
+
+if [ -f "$file_path/$inventory_file" ]; then
+    echo "$inventory_file exist."
+    echo "httpd-logs            $TIMESTAMP              tar             $size" | sudo tee -a $file_path/$inventory_file
+else
+  echo "$inventory_file does not exist."
+  sudo touch $file_path/$inventory_file
+  echo "$inventory_file created."
+  echo "Log Type                Time Created            Type            Size" | sudo tee -a $file_path/$inventory_file
+  echo "httpd-logs            $TIMESTAMP              tar             $size" | sudo tee -a $file_path/$inventory_file
+fi
+
+echo "cron file check"
+cron_file_path="/etc/cron.d"
+cron_file="automation"
+
+if [ -f "$cron_file_path/$cron_file" ]; then
+    echo "$cron_file exist."
+    cat $cron_file_path/$cron_file
+else
+  echo "$cron_file does not exist."
+  sudo touch $cron_file_path/$cron_file
+  echo "$cron_file created."
+  echo "0 0 * * * root /root/Automation_Project/automation.sh" | sudo tee -a $cron_file_path/$cron_file
+  cat $cron_file_path/$cron_file
+fi
